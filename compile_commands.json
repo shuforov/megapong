@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "/home/oleg/plain/game_dev/megaDrive/projects/megapong",
+    "command": "gcc -I/home/oleg/plain/game_dev/megaDrive/sgdkDevEnv/marsdev/sgdk/SGDK/inc -Iout -D__GENESIS__ -c src/main.c",
+    "file": "src/main.c"
+  }
+]
