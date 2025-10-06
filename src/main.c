@@ -2,6 +2,14 @@
 #include <string.h>
 #include <../res/resources.h>
 
+int flashing = FALSE;
+int frames = 0;
+int ball_color = 0;
+
+bool game_on = FALSE;
+char msg_start[22] = "PRESS START TO BEGIN!\0";
+char msg_reset[37] = "GAME OVER! PRESS START TO PLAY AGAIN.";
+
 /*Score variables*/
 int score = 0;
 char label_score[6] = "SCORE\0";
@@ -31,15 +39,36 @@ const int player_height = 8;
 Sprite *ball;
 Sprite *player;
 
-int sign(int x) {
-    return (x > 0) - (x < 0);
-}
+/*Draws text in the center of the screen*/
+void showText(char s[]) { VDP_drawText(s, 20 - strlen(s) / 2, 15); }
 
+int sign(int x) { return (x > 0) - (x < 0); }
 
 void updateScoreDisplay() {
   sprintf(str_score, "%d", score);
   VDP_clearText(1, 2, 3);
   VDP_drawText(str_score, 1, 2);
+}
+
+void endGame() {
+  showText(msg_reset);
+  game_on = FALSE;
+}
+
+void startGame() {
+  score = 0;
+  updateScoreDisplay();
+
+  ball_pos_x = 0;
+  ball_pos_y = 0;
+
+  ball_vel_x = 1;
+  ball_vel_y = 1;
+
+  /*Clear the text from the screen*/
+  VDP_clearTextArea(0, 10, 40, 10);
+
+  game_on = TRUE;
 }
 
 void moveBall() {
@@ -57,8 +86,7 @@ void moveBall() {
     ball_pos_y = TOP_EDGE;
     ball_vel_y = -ball_vel_y;
   } else if (ball_pos_y + ball_height > BOTTOM_EDGE) {
-    ball_pos_y = BOTTOM_EDGE - ball_height;
-    ball_vel_y = -ball_vel_y;
+    endGame();
   }
 
   /*Check for collisions with the player paddle*/
@@ -73,6 +101,8 @@ void moveBall() {
       // Increase the score and update the HUD
       score++;
       updateScoreDisplay();
+
+      flashing = TRUE;
 
       // Make ball faster on every 10th hit
       if (score % 10 == 0) {
@@ -102,6 +132,11 @@ void myJoyHandler(u16 joy, u16 changed, u16 state) {
         player_vel_x = 0;
       }
     }
+    if (state & BUTTON_START) {
+      if (!game_on) {
+        startGame();
+      }
+    }
   }
 }
 
@@ -129,6 +164,8 @@ int main() {
   VDP_drawText(label_score, 1, 1);
   updateScoreDisplay();
 
+  showText(msg_start);
+
   PAL_setPalette(PAL1, bgtile.palette->data, FALSE);
   VDP_fillTileMapRect(BG_B, TILE_ATTR_FULL(PAL1, 0, FALSE, FALSE, 1), 0, 0, 40,
                       30);
@@ -139,10 +176,32 @@ int main() {
                        TILE_ATTR(PAL1, 0, FALSE, FALSE));
   player = SPR_addSprite(&paddle, player_pos_x, player_pos_y,
                          TILE_ATTR(PAL1, 0, FALSE, FALSE));
+  ball_color = PAL_getColor(22);
   while (1) {
-    moveBall();
-    positionPlayer();
-    
+    if (game_on == TRUE) {
+      moveBall();
+      positionPlayer();
+
+      // Handle the flashing of the ball
+      if (flashing == TRUE) {
+        // Cool flashing code goes here!
+        frames++;
+
+        if (frames % 4 == 0) {
+          PAL_setColor(22, ball_color);
+        } else if (frames % 2 == 0) {
+          PAL_setColor(22, RGB24_TO_VDPCOLOR(0xffffff));
+        }
+
+        // Stop flashing
+        if (frames > 30) {
+          flashing = FALSE;
+          frames = 0;
+          PAL_setColor(22, ball_color);
+        }
+      }
+    }
+
     SPR_update();
     SYS_doVBlankProcess();
   }
