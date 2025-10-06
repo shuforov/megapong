@@ -1,5 +1,11 @@
 #include <genesis.h>
+#include <string.h>
 #include <../res/resources.h>
+
+/*Score variables*/
+int score = 0;
+char label_score[6] = "SCORE\0";
+char str_score[4] = "0";
 
 /*The edges of the play field*/
 const int LEFT_EDGE = 0;
@@ -25,6 +31,17 @@ const int player_height = 8;
 Sprite *ball;
 Sprite *player;
 
+int sign(int x) {
+    return (x > 0) - (x < 0);
+}
+
+
+void updateScoreDisplay() {
+  sprintf(str_score, "%d", score);
+  VDP_clearText(1, 2, 3);
+  VDP_drawText(str_score, 1, 2);
+}
+
 void moveBall() {
   // Check horizontal bounds
   if (ball_pos_x < LEFT_EDGE) {
@@ -42,6 +59,27 @@ void moveBall() {
   } else if (ball_pos_y + ball_height > BOTTOM_EDGE) {
     ball_pos_y = BOTTOM_EDGE - ball_height;
     ball_vel_y = -ball_vel_y;
+  }
+
+  /*Check for collisions with the player paddle*/
+  if (ball_pos_x < player_pos_x + player_width &&
+      ball_pos_x + ball_width > player_pos_x) {
+    if (ball_pos_y < player_pos_y + player_height &&
+        ball_pos_y + ball_height >= player_pos_y) {
+      // On collision, invert the velocity
+      ball_pos_y = player_pos_y - ball_height - 1;
+      ball_vel_y = -ball_vel_y;
+
+      // Increase the score and update the HUD
+      score++;
+      updateScoreDisplay();
+
+      // Make ball faster on every 10th hit
+      if (score % 10 == 0) {
+        ball_vel_x += sign(ball_vel_x);
+        ball_vel_y += sign(ball_vel_y);
+      }
+    }
   }
 
   // Position the ball
@@ -85,6 +123,12 @@ int main() {
   JOY_init();
   JOY_setEventHandler(&myJoyHandler);
   VDP_loadTileSet(bgtile.tileset, 1, DMA);
+
+  /*Draw the texts*/
+  VDP_setTextPlane(BG_A);
+  VDP_drawText(label_score, 1, 1);
+  updateScoreDisplay();
+
   PAL_setPalette(PAL1, bgtile.palette->data, FALSE);
   VDP_fillTileMapRect(BG_B, TILE_ATTR_FULL(PAL1, 0, FALSE, FALSE, 1), 0, 0, 40,
                       30);
