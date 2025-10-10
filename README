@@ -1,0 +1,6 @@
+---build project---
+# run in root project command
+$ make
+
+---Rom file---
+In ./out folder will be rom.bin file
